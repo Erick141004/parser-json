@@ -24,7 +24,7 @@ class ParserJSON
     numero_temporario = nil
     texto_temporario = ''
 
-    aux_niveis_objeto = [] # Piilha para auxiliar na ordem de objetos filhos
+    aux_niveis_objeto = [] # Pilha para auxiliar na ordem de objetos aninhados
 
     json.each_char.with_index do |char, index|
       puts "=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#{estado}=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
@@ -111,6 +111,52 @@ class ParserJSON
         estado = :q6
         puts "\nValid JSON!"
         resultado[key_temporaria] = numero_temporario.to_i # TODO: por enquanto estamos aceitando somente inteiros
+        key_temporaria = ''
+        numero_temporario = nil
+        break
+
+      in ['.', :q5, topo]
+        @pilha.push(topo)
+        estado = :q50
+        numero_temporario << char
+
+      in [/^\d$/, :q50, topo]
+        @pilha.push(topo)
+        numero_temporario << char
+
+      in [',', :q50, topo]
+        @pilha.push(topo)
+        estado = :q1
+
+        topo = @pilha.pop
+        @pilha.push(topo)
+
+        if topo == '$'
+          resultado[key_temporaria] = numero_temporario.to_f
+        elsif topo == 'O'
+          obj_atual = resultado.dig(*aux_niveis_objeto) # esse asterisco passa o array como lista
+          obj_atual[key_temporaria] = numero_temporario.to_f
+        end
+
+        key_temporaria = ''
+        numero_temporario = nil
+
+      in ['}', :q50, 'O']
+        estado = :q20
+
+        obj_atual = resultado.dig(*aux_niveis_objeto) # esse asterisco passa o array como lista
+        obj_atual[key_temporaria] = numero_temporario.to_f
+
+        aux_niveis_objeto.pop
+
+        key_temporaria = ''
+        numero_temporario = nil
+
+      in ['}', :q50, '$']
+        puts "DEPOIS: Pilha: #{@pilha}"
+        estado = :q6
+        puts "\nValid JSON!"
+        resultado[key_temporaria] = numero_temporario.to_f
         key_temporaria = ''
         numero_temporario = nil
         break
@@ -276,7 +322,7 @@ class ParserJSON
   end
 end
 
-json = '{"cu":"toba", "id": null, "nome": "Chrystian", "silvafeio":false, "idade": 21, "vivo":true, "sobrenome": "Oliveira", "obj": {"nome": "ERICKJOGANDOCLASHFDP", "fiofo": {"limpinho": "filhodamae","celular": null}}, "erick":"lindao", "yuri":{"cachorro":"aindaperde"}}'.freeze
+json = '{"cu":"toba", "id": null, "nome": "Chrystian", "silvafeio":0.002, "idade": 21, "vivo":true, "sobrenome": "Oliveira", "obj": {"nome": 0.1, "fiofo": {"limpinho": 599.80,"celular": 0099.9900}}, "erick":"lindao", "yuri":{"cachorro":17.50}}'.freeze
 parser = ParserJSON.new
 resultado = parser.leituraJSON(json)
 
