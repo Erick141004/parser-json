@@ -96,8 +96,14 @@ class ParserJSON
           obj_atual = resultado.dig(*aux_niveis_objeto) # esse asterisco passa o array como lista
           obj_atual[key_temporaria] = numero_temporario.to_i
         elsif topo == 'A'
-          arr_atual = resultado.dig(*aux_niveis_array)
-          arr_atual << numero_temporario.to_i
+          if !aux_niveis_objeto.empty?
+            obj_atual = resultado.dig(*aux_niveis_objeto)
+            arr_atual = obj_atual.dig(*aux_niveis_array)
+            arr_atual << numero_temporario.to_i
+          else
+            arr_atual = resultado.dig(*aux_niveis_array)
+            arr_atual << numero_temporario.to_i
+          end
         end
 
         key_temporaria = ''
@@ -106,8 +112,16 @@ class ParserJSON
       in [']', :q5, 'A']
         estado = :q21
 
-        arr_atual = resultado.dig(*aux_niveis_array) # esse asterisco passa o array como lista
-        arr_atual << numero_temporario.to_i
+        # arr_atual = resultado.dig(*aux_niveis_array) # esse asterisco passa o array como lista
+        # arr_atual << numero_temporario.to_i
+        if !aux_niveis_objeto.empty?
+          obj_atual = resultado.dig(*aux_niveis_objeto)
+          arr_atual = obj_atual.dig(*aux_niveis_array)
+          arr_atual << numero_temporario.to_i
+        else
+          arr_atual = resultado.dig(*aux_niveis_array)
+          arr_atual << numero_temporario.to_i
+        end
 
         aux_niveis_array.pop
 
@@ -158,8 +172,14 @@ class ParserJSON
           obj_atual = resultado.dig(*aux_niveis_objeto) # esse asterisco passa o array como lista
           obj_atual[key_temporaria] = numero_temporario.to_f
         elsif topo == 'A'
-          arr_atual = resultado.dig(*aux_niveis_array)
-          arr_atual << numero_temporario.to_f
+          if !aux_niveis_objeto.empty?
+            obj_atual = resultado.dig(*aux_niveis_objeto)
+            arr_atual = obj_atual.dig(*aux_niveis_array)
+            arr_atual << numero_temporario.to_f
+          else
+            arr_atual = resultado.dig(*aux_niveis_array)
+            arr_atual << numero_temporario.to_f
+          end
         end
 
         key_temporaria = ''
@@ -168,8 +188,17 @@ class ParserJSON
       in [']', :q50, 'A']
         estado = :q21
 
-        arr_atual = resultado.dig(*aux_niveis_array) # esse asterisco passa o array como list
-        arr_atual << numero_temporario.to_f
+        # arr_atual = resultado.dig(*aux_niveis_array) # esse asterisco passa o array como list
+        # arr_atual << numero_temporario.to_f
+
+        if !aux_niveis_objeto.empty?
+          obj_atual = resultado.dig(*aux_niveis_objeto)
+          arr_atual = obj_atual.dig(*aux_niveis_array)
+          arr_atual << numero_temporario.to_f
+        else
+          arr_atual = resultado.dig(*aux_niveis_array)
+          arr_atual << numero_temporario.to_f
+        end
 
         aux_niveis_array.pop
 
@@ -231,8 +260,14 @@ class ParserJSON
           obj_atual = resultado.dig(*aux_niveis_objeto)
           obj_atual[key_temporaria] = valor
         elsif topo == 'A'
-          arr_atual = resultado.dig(*aux_niveis_array)
-          arr_atual << valor
+          if !aux_niveis_objeto.empty?
+            obj_atual = resultado.dig(*aux_niveis_objeto)
+            arr_atual = obj_atual.dig(*aux_niveis_array)
+            arr_atual << valor
+          else
+            arr_atual = resultado.dig(*aux_niveis_array)
+            arr_atual << valor
+          end
         end
 
         key_temporaria = ''
@@ -250,8 +285,17 @@ class ParserJSON
           valor = nil
         end
 
-        arr_atual = resultado.dig(*aux_niveis_array)
-        arr_atual << valor
+        # arr_atual = resultado.dig(*aux_niveis_array)
+        # arr_atual << valor
+
+        if !aux_niveis_objeto.empty?
+          obj_atual = resultado.dig(*aux_niveis_objeto)
+          arr_atual = obj_atual.dig(*aux_niveis_array)
+          arr_atual << valor
+        else
+          arr_atual = resultado.dig(*aux_niveis_array)
+          arr_atual << valor
+        end
 
         aux_niveis_array.pop
 
@@ -318,12 +362,14 @@ class ParserJSON
           obj_atual = resultado.dig(*aux_niveis_objeto)
           obj_atual[key_temporaria] = texto_temporario
         elsif topo == 'A'
-          arr_atual = resultado.dig(*aux_niveis_array)
-          arr_atual << texto_temporario
-          # resultado[key_array] << texto_temporario
-          # puts resultado[key_array].length()
-          # puts resultado[key_array]
-          # puts "aaaaaaaaaaaaaaaaaaaa"
+          if !aux_niveis_objeto.empty?
+            obj_atual = resultado.dig(*aux_niveis_objeto)
+            arr_atual = obj_atual.dig(*aux_niveis_array)
+            arr_atual << texto_temporario
+          else
+            arr_atual = resultado.dig(*aux_niveis_array)
+            arr_atual << texto_temporario
+          end
         end
 
         key_temporaria = ''
@@ -390,24 +436,45 @@ class ParserJSON
         @pilha.push('A')
 
         if !aux_niveis_array.empty?
-          arr_atual = resultado.dig(*aux_niveis_array)
-          arr_atual[key_temporaria] = []
+
+          if !aux_niveis_objeto.empty?
+            obj_atual = resultado.dig(*aux_niveis_objeto)
+            arr_atual = obj_atual.dig(*aux_niveis_array)
+          else
+            arr_atual = resultado.dig(*aux_niveis_array)
+          end
+
+          size = arr_atual.length()
+          aux_niveis_array << size
+          arr_atual << []
+        elsif !aux_niveis_objeto.empty?
+          obj_atual = resultado.dig(*aux_niveis_objeto)
+          obj_atual[key_temporaria] = []
+          aux_niveis_array << key_temporaria
         else
           resultado[key_temporaria] = []
+          aux_niveis_array << key_temporaria
         end
 
-        aux_niveis_array << key_temporaria
         # key_array = key_temporaria
         # resultado[key_array] = []
         key_temporaria = ''
 
       in [',', :q21, topo]
         @pilha.push(topo)
-        estado = :q1
+        if topo == 'A'
+          estado = :q4
+        else
+          estado = :q1
+        end
 
       in [']', :q21, 'A']
         estado = :q21
         aux_niveis_array.pop
+
+      in ['}', :q21, 'O']
+        estado = :q20
+        aux_niveis_objeto.pop
 
       in ['}', :q21, '$']
         puts "DEPOIS: Pilha: #{@pilha}"
@@ -430,7 +497,7 @@ class ParserJSON
   end
 end
 
-json = '{"cu":"toba", "arrayzadaXD":[false, true, null], "id": null, "nome": "Chrystian", "silvafeio":0.002, "idade": 21, "vivo":true, "sobrenome": "Oliveira", "obj": {"nome": 0.1, "fiofo": {"limpinho": 599.80,"celular": 0099.9900}}, "erick":"lindao", "yuri":{"cachorro":17.50}}'.freeze
+json = '{"cu":"toba", "arrayzadaXD":[10, 20,[35, [123.456], 36], [false, true], "johanesburgo"], "id": null, "nome": "Chrystian", "silvafeio":0.002, "idade": 21, "vivo":true, "sobrenome": "Oliveira", "obj": {"nome": 0.1, "arr": [1, 2, 3], "fiofo": {"limpinho": 599.80,"celular": 0099.9900, "teste":[true, [50.2, "minecraft"]]}}, "erick":"lindao", "yuri":{"cachorro":17.50}}'.freeze
 parser = ParserJSON.new
 resultado = parser.leituraJSON(json)
 
