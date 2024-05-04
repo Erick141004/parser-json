@@ -60,11 +60,25 @@ class ParserJSON
         topo = @pilha.pop
         @pilha.push(topo)
 
-        if topo == '$'
+        if topo == '$' 
           resultado[key_temporaria] = nil
         elsif topo == 'O'
-          obj_atual = resultado.dig(*aux_niveis_objeto) # esse asterisco passa o array como lista
-          obj_atual[key_temporaria] = nil
+          if !aux_niveis_array.empty?
+
+            if !aux_niveis_objeto.empty?
+              obj_atual = resultado.dig(*aux_niveis_objeto)
+              arr_atual = obj_atual.dig(*aux_niveis_array)
+            else
+              arr_atual = resultado.dig(*aux_niveis_array)
+            end
+            
+            arr_atual[key_temporaria] = nil
+          elsif !aux_niveis_objeto.empty?
+            obj_atual = resultado.dig(*aux_niveis_objeto)
+            obj_atual[key_temporaria] = nil
+          end
+          # obj_atual = resultado.dig(*aux_niveis_objeto) # esse asterisco passa o array como lista
+          # obj_atual[key_temporaria] = nil
         end
 
       in [':', :q3, topo]
@@ -131,8 +145,24 @@ class ParserJSON
       in ['}', :q5, 'O']
         estado = :q20
 
-        obj_atual = resultado.dig(*aux_niveis_objeto) # esse asterisco passa o array como lista
-        obj_atual[key_temporaria] = numero_temporario.to_i # TODO: por enquanto estamos aceitando somente inteiros
+        if !aux_niveis_array.empty?
+
+          if !aux_niveis_objeto.empty?
+            obj_atual = resultado.dig(*aux_niveis_objeto)
+            arr_atual = obj_atual.dig(*aux_niveis_array)
+          else
+            arr_atual = resultado.dig(*aux_niveis_array)
+          end
+
+          arr_atual[key_temporaria] = numero_temporario.to_i
+          aux_niveis_array.pop
+        elsif !aux_niveis_objeto.empty?
+          obj_atual = resultado.dig(*aux_niveis_objeto)
+          obj_atual[key_temporaria] = numero_temporario.to_i
+        end
+
+        # obj_atual = resultado.dig(*aux_niveis_objeto) # esse asterisco passa o array como lista
+        # obj_atual[key_temporaria] = numero_temporario.to_i # TODO: por enquanto estamos aceitando somente inteiros
 
         aux_niveis_objeto.pop
 
@@ -405,15 +435,36 @@ class ParserJSON
         estado = :q1
         @pilha.push('O')
 
-        if !aux_niveis_objeto.empty?
-          obj_atual = resultado.dig(*aux_niveis_objeto) # esse asterisco passa o array como lista
+        if !aux_niveis_array.empty?
+
+          if !aux_niveis_objeto.empty?
+            obj_atual = resultado.dig(*aux_niveis_objeto)
+            arr_atual = obj_atual.dig(*aux_niveis_array)
+          else
+            arr_atual = resultado.dig(*aux_niveis_array)
+          end
+
+          size = arr_atual.length()
+          aux_niveis_array << size
+          arr_atual << {}
+        elsif !aux_niveis_objeto.empty?
+          obj_atual = resultado.dig(*aux_niveis_objeto)
           obj_atual[key_temporaria] = {}
+          # aux_niveis_array << key_temporaria
         else
           resultado[key_temporaria] = {}
+          # aux_niveis_array << key_temporaria
         end
 
-        aux_niveis_objeto << key_temporaria
-        key_temporaria = ''
+        # if !aux_niveis_objeto.empty?
+        #   obj_atual = resultado.dig(*aux_niveis_objeto) # esse asterisco passa o array como lista
+        #   obj_atual[key_temporaria] = {}
+        # else
+        #   resultado[key_temporaria] = {}
+        # end,
+
+        # aux_niveis_objeto << key_temporaria
+        # key_temporaria = ''
 
       in ['}', :q20, 'O']
         estado = :q20
@@ -426,7 +477,13 @@ class ParserJSON
 
       in [',', :q20, topo]
         @pilha.push(topo)
-        estado = :q1
+
+        if topo == 'A'
+          estado = :q4
+        else
+          estado = :q1
+        end
+
       # END OBJ
 
       # START ARR
@@ -497,7 +554,9 @@ class ParserJSON
   end
 end
 
-json = '{"cu":"toba", "arrayzadaXD":[10, 20,[35, [123.456], 36], [false, true], "johanesburgo"], "id": null, "nome": "Chrystian", "silvafeio":0.002, "idade": 21, "vivo":true, "sobrenome": "Oliveira", "obj": {"nome": 0.1, "arr": [1, 2, 3], "fiofo": {"limpinho": 599.80,"celular": 0099.9900, "teste":[true, [50.2, "minecraft"]]}}, "erick":"lindao", "yuri":{"cachorro":17.50}}'.freeze
+
+json = '{"cu": [{"abc": 20}, 3, "teste"]}'
+#json = '{"cu":"toba", "arrayzadaXD":[10, 20,[35, [123.456], 36], [false, true], "johanesburgo"], "id": null, "nome": "Chrystian", "silvafeio":0.002, "idade": 21, "vivo":true, "sobrenome": "Oliveira", "obj": {"nome": 0.1, "arr": [1, 2, 3], "fiofo": {"limpinho": 599.80,"celular": 0099.9900, "teste":[true, [50.2, "minecraft"]]}}, "erick":"lindao", "yuri":{"cachorro":17.50}, "bundadochrys": [{"sprayzada": 20}, 2]}'.freeze
 parser = ParserJSON.new
 resultado = parser.leituraJSON(json)
 
