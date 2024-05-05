@@ -500,12 +500,23 @@ class ParserJSON
             obj_atual = resultado.dig(*aux_niveis_objeto)
             arr_atual = obj_atual.dig(*aux_niveis_array)
           else
+            if key_temporaria != ''
+              aux_niveis_array << key_temporaria
+            end
             arr_atual = resultado.dig(*aux_niveis_array)
           end
 
-          size = arr_atual.length
-          aux_niveis_array << size
-          arr_atual << {}
+          if arr_atual == nil
+            arr_atual = {}
+            ultimo_index = aux_niveis_array.pop
+            temp = resultado.dig(*aux_niveis_array)
+            temp[key_temporaria] = arr_atual
+            aux_niveis_array.push(ultimo_index)
+          else
+            size = arr_atual.length
+            aux_niveis_array << size
+            arr_atual << {}
+          end
         elsif !aux_niveis_objeto.empty?
           obj_atual = resultado.dig(*aux_niveis_objeto)
           obj_atual[key_temporaria] = {}
@@ -550,6 +561,10 @@ class ParserJSON
         else
           estado = :q1
         end
+      
+      in [']', :q20, topo]
+        #@pilha.push(topo)
+        estado = :q20
 
       # END OBJ
 
@@ -644,7 +659,7 @@ class ParserJSON
 end
 
 #json = '{"cu": [{"abc": 20, "cba": [0,2]}, 3, "teste"]}'
-json = '{"cu":"toba", "arrayzadaXD":[10, 20,[35, [123.456], 36], [false, true], "johanesburgo"], "id": null, "nome": "Chrystian", "silvafeio":0.002, "idade": 21, "vivo":true, "sobrenome": "Oliveira", "obj": {"nome": 0.1, "arr": [1, 2, 3], "fiofo": {"limpinho": 599.80,"celular": 99.99, "teste":[true, [50.2, "minecraft"]]}}, "erick":"lindao", "yuri":{"cachorro":17.50}, "bundadochrys": [{"sprayzada": 20}, 2, {"abc": 20, "cba": [0,2], "double": 2.3, "bool": true, "string": "PAU NO CU"}, 3, "teste"]}'.freeze
+json = '{"cu":"toba", "arrayzadaXD":[10, 20,[35, [123.456], 36], [false, true], "johanesburgo"], "id": null, "nome": "Chrystian", "silvafeio":0.002, "idade": 21, "vivo":true, "sobrenome": "Oliveira", "obj": {"nome": 0.1, "arr": [1, 2, 3], "fiofo": {"limpinho": 599.80,"celular": 99.99, "teste":[true, [50.2, "minecraft"]]}}, "erick":"lindao", "yuri":{"cachorro":17.50}, "bundadochrys": [{"sprayzada": 20}, 2, {"abc": 20, "cba": [0, 2, {"sla": 12, "algo": {"somos": "foda"}}], "double": 2.3, "bool": true, "string": "PAU NO CU"}, 3, "teste"]}'.freeze
 parser = ParserJSON.new
 resultado = parser.leituraJSON(json)
 
