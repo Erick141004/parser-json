@@ -46,7 +46,7 @@ class ParserJSON
         estado = :q2
         @pilha.push('WK')
 
-      in [/^[a-zA-Z0-9.\-:,\s=;\/]$/, :q2, topo] # TODO: por enquanto so aceitamos letras no key
+      in [/^[a-zA-Z0-9.\-:,\s=;\/@]$/, :q2, topo] # TODO: por enquanto so aceitamos letras no key
         @pilha.push(topo)
         estado = :q2
         key_temporaria << char
@@ -412,7 +412,7 @@ class ParserJSON
         estado = :q7
         @pilha.push('WV')
 
-      in [/^[a-zA-Z0-9.\-:,\s=;\/]$/, :q7, topo] # TODO: estamos aceitando somente letras
+      in [/^[a-zA-Z0-9.\-:,\s=;\/@]$/, :q7, topo] # TODO: estamos aceitando somente letras
         @pilha.push(topo)
         texto_temporario << char
 
@@ -456,7 +456,10 @@ class ParserJSON
 
       in ['}', :q19, 'O']
         estado = :q20
-        aux_niveis_objeto.pop
+
+        if !@pilha.include?('O')
+          aux_niveis_objeto.pop
+        end
 
         topo = @pilha.pop
         @pilha.push(topo)
@@ -489,11 +492,14 @@ class ParserJSON
       in ['{', :q4, topo]
         @pilha.push(topo)
         estado = :q1
-        @pilha.push('O')
+        
 
         if !aux_niveis_array.empty?
 
           if !aux_niveis_objeto.empty?
+            if key_temporaria != ''
+              aux_niveis_array << key_temporaria
+            end
             obj_atual = resultado.dig(*aux_niveis_objeto)
             arr_atual = obj_atual.dig(*aux_niveis_array)
           else
@@ -506,11 +512,16 @@ class ParserJSON
           if arr_atual == nil
             arr_atual = {}
             ultimo_index = aux_niveis_array.pop
-            temp = resultado.dig(*aux_niveis_array)
+
+            temp = if aux_niveis_objeto.length >= 1
+                      obj_atual.dig(*aux_niveis_array)
+                  else
+                    resultado.dig(*aux_niveis_array)
+                  end    
             temp[key_temporaria] = arr_atual
             aux_niveis_array.push(ultimo_index)
           else
-            size = arr_atual.length
+            size = arr_atual.length 
             aux_niveis_array << size
             arr_atual << {}
           end
@@ -532,6 +543,7 @@ class ParserJSON
 
       # aux_niveis_objeto << key_temporaria
       key_temporaria = ''
+      @pilha.push('O')
 
       in ['}', :q20, 'O']
         estado = :q20
@@ -659,34 +671,28 @@ class ParserJSON
   end
 end
 
-#json = '{"cu": [{"abc": 20, "cba": [0,2]}, 3, "teste"]}'
-json = '{"menu": {
-  "header": "SVG Viewer",
-  "items": [
-      {"id": "Open"},
-      {"id": "OpenNew", "label": "Open New"},
-      null,
-      {"id": "ZoomIn", "label": "Zoom In"},
-      {"id": "ZoomOut", "label": "Zoom Out"},
-      {"id": "OriginalView", "label": "Original View"},
-      null,
-      {"id": "Quality"},
-      {"id": "Pause"},
-      {"id": "Mute"},
-      null,
-      {"id": "Find", "label": "Find..."},
-      {"id": "FindAgain", "label": "Find Again"},
-      {"id": "Copy"},
-      {"id": "CopyAgain", "label": "Copy Again"},
-      {"id": "CopySVG", "label": "Copy SVG"},
-      {"id": "ViewSVG", "label": "View SVG"},
-      {"id": "ViewSource", "label": "View Source"},
-      {"id": "SaveAs", "label": "Save As"},
-      null,
-      {"id": "Help"},
-      {"id": "About", "label": "About Adobe CVG Viewer..."}
-  ]
-}}'
+json = '{
+  "glossary": {
+      "title": "example glossary",
+      "GlossDiv": {
+          "title": "S",
+          "GlossList": {
+              "GlossEntry": {
+                  "ID": "SGML",
+                  "SortAs": "SGML",
+                  "GlossTerm": "Standard Generalized Markup Language",
+                  "Acronym": "SGML",
+                  "Abbrev": "ISO 8879:1986",
+                  "GlossDef": {
+                      "para": "A meta-markup language, used to create markup languages such as DocBook.",
+                      "GlossSeeAlso": ["GML", "XML"]
+                  },
+                  "GlossSee": "markup"
+              }
+          }
+      }
+  }
+}'
 parser = ParserJSON.new
 resultado = parser.leituraJSON(json)
 
