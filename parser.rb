@@ -464,7 +464,7 @@ class ParserJSON
         topo = @pilha.pop
         @pilha.push(topo)
 
-        if topo == 'A'
+        if aux_niveis_array.length > 1
           aux_niveis_array.pop
         end
 
@@ -543,7 +543,7 @@ class ParserJSON
         topo = @pilha.pop
         @pilha.push(topo)
 
-        if topo == 'A'
+        if aux_niveis_array.length > 1
           aux_niveis_array.pop
         end
 
@@ -565,6 +565,7 @@ class ParserJSON
       in [']', :q20, topo]
         #@pilha.push(topo)
         estado = :q20
+        aux_niveis_array.pop
 
       # END OBJ
 
@@ -633,7 +634,7 @@ class ParserJSON
         topo = @pilha.pop
         @pilha.push(topo)
 
-        if topo == 'A'
+        if aux_niveis_array.length > 1
           aux_niveis_array.pop
         end
 
