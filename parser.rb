@@ -36,9 +36,6 @@ class ParserJSON
 
       case [char, estado, @pilha.pop]
 
-      in [/^\s$/, _, topo]
-        @pilha.push(topo)
-
       in ['{', :q0, nil]
         estado = :q1
         @pilha.push('$')
@@ -415,7 +412,7 @@ class ParserJSON
         estado = :q7
         @pilha.push('WV')
 
-      in [/^[a-zA-Z]$/, :q7, topo] # TODO: estamos aceitando somente letras
+      in [/^[a-zA-Z0-9.\-:,\s]$/, :q7, topo] # TODO: estamos aceitando somente letras
         @pilha.push(topo)
         texto_temporario << char
 
@@ -561,7 +558,7 @@ class ParserJSON
         else
           estado = :q1
         end
-      
+
       in [']', :q20, topo]
         #@pilha.push(topo)
         estado = :q20
@@ -600,7 +597,7 @@ class ParserJSON
             size = arr_atual.length
             aux_niveis_array << size
             arr_atual << []
-          end   
+          end
         elsif !aux_niveis_objeto.empty?
           obj_atual = resultado.dig(*aux_niveis_objeto)
           obj_atual[key_temporaria] = []
@@ -643,6 +640,9 @@ class ParserJSON
         puts "\nValid JSON!"
       # END ARR
 
+      in [/^\s$/, _, topo]
+        @pilha.push(topo)
+
       else
         puts "DEPOIS: Pilha: #{@pilha}"
 
@@ -659,9 +659,30 @@ class ParserJSON
 end
 
 #json = '{"cu": [{"abc": 20, "cba": [0,2]}, 3, "teste"]}'
-json = '{"cu":"toba", "arrayzadaXD":[10, 20,[35, [123.456], 36], [false, true], "johanesburgo"], "id": null, "nome": "Chrystian", "silvafeio":0.002, "idade": 21, "vivo":true, "sobrenome": "Oliveira", "obj": {"nome": 0.1, "arr": [1, 2, 3], "fiofo": {"limpinho": 599.80,"celular": 99.99, "teste":[true, [50.2, "minecraft"]]}}, "erick":"lindao", "yuri":{"cachorro":17.50}, "bundadochrys": [{"sprayzada": 20}, 2, {"abc": 20, "cba": [0, 2, {"sla": 12, "algo": {"somos": "foda"}}], "double": 2.3, "bool": true, "string": "PAU NO CU"}, 3, "teste"]}'.freeze
+json = '{
+  "glossary": {
+      "title": "example glossary",
+  "GlossDiv": {
+          "title": "S",
+    "GlossList": {
+              "GlossEntry": {
+                  "ID": "SGML",
+        "SortAs": "SGML",
+        "GlossTerm": "Standard Generalized Markup Language",
+        "Acronym": "SGML",
+        "Abbrev": "ISO 8879:1986",
+        "GlossDef": {
+                      "para": "A meta-markup language, used to create markup languages such as DocBook.",
+          "GlossSeeAlso": ["GML", "XML"]
+                  },
+        "GlossSee": "markup"
+              }
+          }
+      }
+  }
+}'
+
 parser = ParserJSON.new
 resultado = parser.leituraJSON(json)
 
 puts resultado
-puts resultado['cu']
