@@ -46,7 +46,7 @@ class ParserJSON
         estado = :q2
         @pilha.push('WK')
 
-      in [/^[a-zA-Z0-9.\-:,\s=;\/@]$/, :q2, topo] # TODO: por enquanto so aceitamos letras no key
+      in [/^[a-zA-Z0-9.\-:,\s=;\/@\?&\*]$/, :q2, topo] # TODO: por enquanto so aceitamos letras no key
         @pilha.push(topo)
         estado = :q2
         key_temporaria << char
@@ -108,7 +108,7 @@ class ParserJSON
             if !aux_niveis_objeto.empty?
               obj_atual = resultado.dig(*aux_niveis_objeto)
               arr_atual = obj_atual.dig(*aux_niveis_array)
-              arr_atual << numero_temporario.to_i
+              arr_atual[key_temporaria] = numero_temporario.to_i
             else
               arr_atual = resultado.dig(*aux_niveis_array)
               arr_atual[key_temporaria] = numero_temporario.to_i
@@ -174,7 +174,9 @@ class ParserJSON
         # obj_atual = resultado.dig(*aux_niveis_objeto) # esse asterisco passa o array como lista
         # obj_atual[key_temporaria] = numero_temporario.to_i # TODO: por enquanto estamos aceitando somente inteiros
 
-        aux_niveis_objeto.pop
+        if !@pilha.include?('O') 
+          aux_niveis_objeto.pop
+        end
 
         key_temporaria = ''
         numero_temporario = nil
@@ -213,7 +215,7 @@ class ParserJSON
             if !aux_niveis_objeto.empty?
               obj_atual = resultado.dig(*aux_niveis_objeto)
               arr_atual = obj_atual.dig(*aux_niveis_array)
-              arr_atual << numero_temporario.to_f
+              arr_atual[key_temporaria] = numero_temporario.to_f
             else
               arr_atual = resultado.dig(*aux_niveis_array)
               arr_atual[key_temporaria] = numero_temporario.to_f
@@ -264,7 +266,9 @@ class ParserJSON
         obj_atual = resultado.dig(*aux_niveis_objeto) # esse asterisco passa o array como lista
         obj_atual[key_temporaria] = numero_temporario.to_f
 
-        aux_niveis_objeto.pop
+        if !@pilha.include?('O') 
+          aux_niveis_objeto.pop
+        end
 
         key_temporaria = ''
         numero_temporario = nil
@@ -314,7 +318,7 @@ class ParserJSON
             if !aux_niveis_objeto.empty?
               obj_atual = resultado.dig(*aux_niveis_objeto)
               arr_atual = obj_atual.dig(*aux_niveis_array)
-              arr_atual << valor
+              arr_atual[key_temporaria] = valor
             else
               arr_atual = resultado.dig(*aux_niveis_array)
               arr_atual[key_temporaria] = valor
@@ -380,10 +384,18 @@ class ParserJSON
           valor = nil
         end
 
-        obj_atual = resultado.dig(*aux_niveis_objeto) # esse asterisco passa o array como lista
-        obj_atual[key_temporaria] = valor
+        if !aux_niveis_array.empty?
+          obj_atual = resultado.dig(*aux_niveis_objeto)
+          arr_atual = obj_atual.dig(*aux_niveis_array)
+          arr_atual[key_temporaria] = valor
+        else
+          obj_atual = resultado.dig(*aux_niveis_objeto) # esse asterisco passa o array como lista
+          obj_atual[key_temporaria] = valor
+        end
 
-        aux_niveis_objeto.pop
+        if !@pilha.include?('O') 
+          aux_niveis_objeto.pop
+        end
 
         key_temporaria = ''
         texto_temporario = ''
@@ -412,7 +424,7 @@ class ParserJSON
         estado = :q7
         @pilha.push('WV')
 
-      in [/^[a-zA-Z0-9.\-:,\s=;\/@]$/, :q7, topo] # TODO: estamos aceitando somente letras
+      in [/^[a-zA-Z0-9.\-:,\s=;\/@\?&\*]$/, :q7, topo] # TODO: estamos aceitando somente letras
         @pilha.push(topo)
         texto_temporario << char
 
@@ -457,12 +469,9 @@ class ParserJSON
       in ['}', :q19, 'O']
         estado = :q20
 
-        if !@pilha.include?('O')
+        if !@pilha.include?('O') || aux_niveis_objeto.length > 1
           aux_niveis_objeto.pop
         end
-
-        topo = @pilha.pop
-        @pilha.push(topo)
 
         if aux_niveis_array.length > 1
           aux_niveis_array.pop
@@ -492,7 +501,6 @@ class ParserJSON
       in ['{', :q4, topo]
         @pilha.push(topo)
         estado = :q1
-        
 
         if !aux_niveis_array.empty?
 
@@ -511,15 +519,21 @@ class ParserJSON
 
           if arr_atual == nil
             arr_atual = {}
-            ultimo_index = aux_niveis_array.pop
+            ultimo_index = nil
+
+            if aux_niveis_array.length > 1
+                ultimo_index = aux_niveis_array.pop
+            end
 
             temp = if aux_niveis_objeto.length >= 1
-                      obj_atual.dig(*aux_niveis_array)
-                  else
-                    resultado.dig(*aux_niveis_array)
-                  end    
+                     obj_atual.dig(*aux_niveis_array)
+                   else
+                     resultado.dig(*aux_niveis_array)
+                   end
             temp[key_temporaria] = arr_atual
-            aux_niveis_array.push(ultimo_index)
+            if !ultimo_index.nil?
+              aux_niveis_array.push(ultimo_index)
+            end
           else
             size = arr_atual.length 
             aux_niveis_array << size
@@ -547,10 +561,10 @@ class ParserJSON
 
       in ['}', :q20, 'O']
         estado = :q20
-        aux_niveis_objeto.pop
 
-        topo = @pilha.pop
-        @pilha.push(topo)
+        if !@pilha.include?('O') || aux_niveis_objeto.length > 1
+          aux_niveis_objeto.pop
+        end
 
         if aux_niveis_array.length > 1
           aux_niveis_array.pop
@@ -574,7 +588,12 @@ class ParserJSON
       in [']', :q20, topo]
         #@pilha.push(topo)
         estado = :q20
-        aux_niveis_array.pop
+        
+        if !@pilha.include?('A')
+          aux_niveis_array.clear
+        else
+          aux_niveis_array.pop
+        end
 
       # END OBJ
 
@@ -634,14 +653,19 @@ class ParserJSON
 
       in [']', :q21, 'A']
         estado = :q21
-        aux_niveis_array.pop
+
+        if !@pilha.include?('A')
+          aux_niveis_array.clear
+        else
+          aux_niveis_array.pop
+        end
 
       in ['}', :q21, 'O']
         estado = :q20
-        aux_niveis_objeto.pop
 
-        topo = @pilha.pop
-        @pilha.push(topo)
+        if !@pilha.include?('O') || aux_niveis_objeto.length > 1
+          aux_niveis_objeto.pop
+        end
 
         if aux_niveis_array.length > 1
           aux_niveis_array.pop
@@ -671,28 +695,114 @@ class ParserJSON
   end
 end
 
-json = '{
-  "glossary": {
-      "title": "example glossary",
-      "GlossDiv": {
-          "title": "S",
-          "GlossList": {
-              "GlossEntry": {
-                  "ID": "SGML",
-                  "SortAs": "SGML",
-                  "GlossTerm": "Standard Generalized Markup Language",
-                  "Acronym": "SGML",
-                  "Abbrev": "ISO 8879:1986",
-                  "GlossDef": {
-                      "para": "A meta-markup language, used to create markup languages such as DocBook.",
-                      "GlossSeeAlso": ["GML", "XML"]
-                  },
-                  "GlossSee": "markup"
-              }
-          }
-      }
-  }
-}'
+json = '{"web-app": {
+  "servlet": [
+    {
+      "servlet-name": "cofaxCDS",
+      "servlet-class": "org.cofax.cds.CDSServlet",
+      "init-param": {
+        "configGlossary:installationAt": "Philadelphia, PA",
+        "configGlossary:adminEmail": "ksm@pobox.com",
+        "configGlossary:poweredBy": "Cofax",
+        "configGlossary:poweredByIcon": "/images/cofax.gif",
+        "configGlossary:staticPath": "/content/static",
+        "templateProcessorClass": "org.cofax.WysiwygTemplate",
+        "templateLoaderClass": "org.cofax.FilesTemplateLoader",
+        "templatePath": "templates",
+        "templateOverridePath": "",
+        "defaultListTemplate": "listTemplate.htm",
+        "defaultFileTemplate": "articleTemplate.htm",
+        "useJSP": false,
+        "jspListTemplate": "listTemplate.jsp",
+        "jspFileTemplate": "articleTemplate.jsp",
+        "cachePackageTagsTrack": 200,
+        "cachePackageTagsStore": 200,
+        "cachePackageTagsRefresh": 60,
+        "cacheTemplatesTrack": 100,
+        "cacheTemplatesStore": 50,
+        "cacheTemplatesRefresh": 15,
+        "cachePagesTrack": 200,
+        "cachePagesStore": 100,
+        "cachePagesRefresh": 10,
+        "cachePagesDirtyRead": 10,
+        "searchEngineListTemplate": "forSearchEnginesList.htm",
+        "searchEngineFileTemplate": "forSearchEngines.htm",
+        "searchEngineRobotsDb": "WEB-INF/robots.db",
+        "useDataStore": true,
+        "dataStoreClass": "org.cofax.SqlDataStore",
+        "redirectionClass": "org.cofax.SqlRedirection",
+        "dataStoreName": "cofax",
+        "dataStoreDriver": "com.microsoft.jdbc.sqlserver.SQLServerDriver",
+        "dataStoreUrl": "jdbc:microsoft:sqlserver://LOCALHOST:1433;DatabaseName=goon",
+        "dataStoreUser": "sa",
+        "dataStorePassword": "dataStoreTestQuery",
+        "dataStoreTestQuery": "SET NOCOUNT ON;select test=;",
+        "dataStoreLogFile": "/usr/local/tomcat/logs/datastore.log",
+        "dataStoreInitConns": 10,
+        "dataStoreMaxConns": 100,
+        "dataStoreConnUsageLimit": 100,
+        "dataStoreLogLevel": "debug",
+        "maxUrlLength": 500}},
+    {
+      "servlet-name": "cofaxEmail",
+      "servlet-class": "org.cofax.cds.EmailServlet",
+      "init-param": {
+      "mailHost": "mail1",
+      "mailHostOverride": "mail2"}},
+    {
+      "servlet-name": "cofaxAdmin",
+      "servlet-class": "org.cofax.cds.AdminServlet"},
+    {
+      "servlet-name": "fileServlet",
+      "servlet-class": "org.cofax.cds.FileServlet"},
+    {
+      "servlet-name": "cofaxTools",
+      "servlet-class": "org.cofax.cms.CofaxToolsServlet",
+      "init-param": {
+        "templatePath": "toolstemplates/",
+        "log": 1,
+        "logLocation": "/usr/local/tomcat/logs/CofaxTools.log",
+        "logMaxSize": "",
+        "dataLog": 1,
+        "dataLogLocation": "/usr/local/tomcat/logs/dataLog.log",
+        "dataLogMaxSize": "",
+        "removePageCache": "/content/admin/remove?cache=pages&id=",
+        "removeTemplateCache": "/content/admin/remove?cache=templates&id=",
+        "fileTransferFolder": "/usr/local/tomcat/webapps/content/fileTransferFolder",
+        "lookInContext": 1,
+        "adminGroupID": 4,
+        "betaServer": true}}],
+  "servlet-mapping": {
+    "cofaxCDS": "/",
+    "cofaxEmail": "/cofaxutil/aemail/*",
+    "cofaxAdmin": "/admin/*",
+    "fileServlet": "/static/*",
+    "cofaxTools": "/tools/*"},
+  "taglib": {
+    "taglib-uri": "cofax.tld",
+    "taglib-location": "/WEB-INF/tlds/cofax.tld"}}}'
+# json = '{
+#   "glossary": {
+#       "title": "example glossary",
+#       "GlossDiv": {
+#           "title": "S",
+#           "GlossList": {
+#               "GlossEntry": {
+#                   "ID": "SGML",
+#                   "SortAs": "SGML",
+#                   "GlossTerm": "Standard Generalized Markup Language",
+#                   "Acronym": "SGML",
+#                   "Abbrev": "ISO 8879:1986",
+#                   "GlossDef": {
+#                       "para": "A meta-markup language, used to create markup languages such as DocBook.",
+#                       "GlossSeeAlso": ["GML", "XML"]
+#                   },
+#                   "GlossSee": "markup"
+#               }
+#           }
+#       }
+#   }
+# }'
 parser = ParserJSON.new
 resultado = parser.leituraJSON(json)
 
